@@ -6,9 +6,11 @@
   "type": "module",
   "scripts": {
     "express": "tsx examples/express-api/server.ts",
+    "express:chaos": "tsx examples/express-api/server-no-correlation.ts",
     "kafka:mock": "tsx examples/kafka-consumer/mockRunner.ts",
     "cross-service": "tsx examples/cross-service/run-hop.ts",
-    "demo:curl": "bash examples/express-api/scripts/demo-curl.sh"
+    "demo:curl": "bash examples/express-api/scripts/demo-curl.sh",
+    "demo:curl:chaos": "bash examples/express-api/scripts/demo-curl-chaos.sh"
   },
   "dependencies": {
     "express": "^4.21.2",

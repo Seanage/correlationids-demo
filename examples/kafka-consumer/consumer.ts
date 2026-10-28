@@ -21,7 +21,10 @@ export type FakeKafkaMessage = {
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /** What you'd put around kafkajs eachMessage */
-export async function handleMessage(message: FakeKafkaMessage): Promise<void> {
+export async function handleMessage(
+  message: FakeKafkaMessage,
+  downstreamUrls: string[] = ['http://localhost:4090/work'],
+): Promise<void> {
   const taskContextId = `taskId-${uuidv4()}`;
 
   return runWithStore({ taskContextId }, async () => {
@@ -33,8 +36,15 @@ export async function handleMessage(message: FakeKafkaMessage): Promise<void> {
     await sleep(50);
     logger.info('kafka message processing', { payload: message.value });
 
-    // Optional: call another service and forward the correlation header
-    await callDownstream('http://localhost:4090/work');
+    // Keep every call inside the same task context. Each HTTP request gets
+    // its own requestId at the API boundary, but shares this taskContextId.
+    for (const [index, url] of downstreamUrls.entries()) {
+      logger.info('downstream request started', {
+        requestNumber: index + 1,
+        totalRequests: downstreamUrls.length,
+      });
+      await callDownstream(url);
+    }
 
     logger.info('kafka message finished', { topic: message.topic });
   });

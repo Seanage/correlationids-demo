@@ -21,16 +21,28 @@ npm install
 
 ## Examples
 
-### 1. Express API
+### 0. Before — no CorrelationIds (chaos)
+
+Same multi-step `/work` handler, **no** request context. Concurrent curls produce interleaved identical log lines with nothing to filter on.
 
 ```bash
-npm run express
+npm run express:chaos          # port 4091
+# other terminal:
+npm run demo:curl:chaos
+```
+
+Watch the server terminal: `work started` / `validate` / `persist` / `finished` from four requests mixed together.
+
+### 1. Express API (with CorrelationIds)
+
+```bash
+npm run express                # port 4090
 # other terminal:
 npm run demo:curl
 ```
 
 - Middleware creates `requestId`, optionally accepts inbound `taskcontextid`
-- Parallel curls interleave log lines; filter by `request_id` from the response header
+- Parallel curls still interleave, but you can filter by `request_id` from the response header
 - **Addon:** response headers (`request_id`, `taskContextId`) + optional JSON `correlation` so callers can paste ids into support tickets
 
 ### Addon — give callers ticket context
@@ -64,13 +76,15 @@ npm run express
 npm run cross-service
 ```
 
-One `taskContextId` appears in both consumer and API logs; the API hop also gets its own `requestId`.
+One Kafka-style task makes three sequential `/work` requests. The same `taskContextId`
+appears in both consumer and API logs for all three calls, while each HTTP request
+gets a different `requestId`. Consumer response logs expose it as `downstreamRequestId`.
 
 ## Layout
 
 ```
 shared/                     # ALS + JSON logger
-examples/express-api/       # middleware + curl demo
+examples/express-api/       # with ids (server.ts) + chaos (server-no-correlation.ts)
 examples/kafka-consumer/    # eachMessage-style wrap + mock runner
 examples/cross-service/     # hop narration + runner
 ```

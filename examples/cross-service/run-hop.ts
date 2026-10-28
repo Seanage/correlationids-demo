@@ -2,7 +2,8 @@
  * Cross-service hop demo
  *
  * Kafka-style boundary creates taskContextId → outbound header taskcontextid
- * → Express middleware stores it alongside a new requestId → both log streams share the task id.
+ * → three sequential HTTP calls → Express creates a new requestId for each,
+ * while all requests and both log streams share the same taskContextId.
  *
  * Requires express-api on PORT (default 4090).
  */
@@ -27,16 +28,21 @@ async function main() {
 
   console.error('=== cross-service hop ===');
   console.error('1) consumer creates taskContextId');
-  console.error('2) forwards taskcontextid header to express-api');
-  console.error('3) express adds its own requestId; both appear on API logs\n');
+  console.error('2) makes three sequential /work requests with the same taskcontextid header');
+  console.error('3) express creates a different requestId for every request');
+  console.error('4) compare downstreamRequestId in the consumer logs; taskContextId stays the same\n');
 
-  await handleMessage({
-    topic: 'demo.jobs',
-    offset: '999',
-    value: '{"job":"cross-service-demo"}',
-  });
+  await handleMessage(
+    {
+      topic: 'demo.jobs',
+      offset: '999',
+      value: '{"job":"cross-service-demo"}',
+    },
+    Array.from({ length: 3 }, () => `${base}/work`),
+  );
 
-  console.error('\nFilter either process log stream by the same taskContextId to follow one action.');
+  console.error('\nFilter by taskContextId to follow all three requests across both processes.');
+  console.error('Filter API logs by one requestId to see only that individual HTTP request.');
 }
 
 main().catch((err) => {
